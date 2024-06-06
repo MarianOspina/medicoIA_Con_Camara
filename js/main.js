@@ -3,20 +3,62 @@ document.addEventListener("DOMContentLoaded", () => {
     userInput.addEventListener('keydown', async (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
-            const userMessage = userInput.value; sendMessage(userMessage)
-           // const response = await sendMessage(userMessage);
+            const userMessage = userInput.value; 
+            sendMessage(userMessage);
             displayMessage('Usuario', userMessage);
-            //displayMessage('SaludBot', response);
             userInput.value = '';
         }
     });
+
+    // Inicializar la cámara y la detección de personas
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+            video.srcObject = stream;
+            video.play();
+        })
+        .catch((err) => {
+            console.error("Error al acceder a la cámara: ", err);
+        });
+
+    ml5.objectDetector('cocossd', modelReady);
+
+    function modelReady() {
+        console.log('Modelo cargado');
+        detect();
+    }
+
+    function detect() {
+        ml5.objectDetector('cocossd').detect(video, (err, results) => {
+            if (err) {
+                console.error(err);
+                return;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            results.forEach((result) => {
+                if (result.label === 'person') {
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(result.x, result.y, result.width, result.height);
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = '#00FF00';
+                    ctx.fillText(`${result.label} (${Math.round(result.confidence * 100)}%)`, result.x, result.y > 10 ? result.y - 5 : 10);
+                }
+            });
+            requestAnimationFrame(detect);
+        });
+    }
 });
 
 function sendMessage(inputText) {
     const postData = {
         model: "TheBloke/CodeLlama-7B-Instruct-GGUF/codellama-7b-instruct.Q4_K_S.gguf",
         messages: [
-            { role: "system", content: "Como médico experto, tu deber es resolver todas las dudas que tenga el paciente. Por favor, responde siempre en español. Solo responde preguntas que tengan que ver con medicina"},
+            { role: "system", content: "Como médico experto, tu deber es resolver todas las dudas que tenga el paciente. Por favor, responde siempre en español. Solo responde preguntas que tengan que ver con medicina" },
             { role: "user", content: inputText }
         ],
         temperature: 0.7,
@@ -24,30 +66,17 @@ function sendMessage(inputText) {
         stream: false
     };
 
-
     const jsonData = JSON.stringify(postData);
-    
-    //alert(jsonData)
+
     const xhr = new XMLHttpRequest();
     xhr.open('POST', 'http://localhost:3003/v1/chat/completions', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
-    
+
     xhr.onload = function () {
-        console.log(xhr.responseText);
-               
         if (xhr.status === 200) {
-            // Manejar la respuesta del servidor
-           
             const response = JSON.parse(xhr.responseText);
-     
-            // Verificar si response.choices[0] y response.choices[0].message existen
             if (response.choices && response.choices[0] && response.choices[0].message) {
                 const respuesta = response.choices[0].message.content.trim();
-                console.log("Respuesta del servidor:", respuesta);
-              //displayLetterByLetter(respuesta); // Llamamos a la función para mostrar letra por letra              
-
-                //alert("respuesta")
-                // Actualizar el contenido del elemento con ID "caja-respuesta"
                 document.getElementById("chat-container").innerText = respuesta;
             } else {
                 console.error("No se encontró texto en la respuesta.");
@@ -57,23 +86,8 @@ function sendMessage(inputText) {
         }
     };
 
-    //alert(jsonData);
     xhr.send(jsonData);
-
 }
-
-/*function displayLetterByLetter(respuesta) {
-    const chatContainer = document.getElementById("chat-container");
-    let index = 0;
-    const interval = setInterval(() => {
-        chatContainer.innerText += " " + respuesta[index];
-        index++;
-        if (index === respuesta.length) {
-            clearInterval(interval);
-        }
-    }, 100); // Puedes ajustar la velocidad de escritura cambiando este valor
-}*/
-
 
 function displayMessage(sender, message) {
     const chatContainer = document.getElementById('chat-container');
@@ -81,23 +95,3 @@ function displayMessage(sender, message) {
     chatContainer.innerHTML += formattedMessage;
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
-/*
-    const url = "http://localhost:3003/v1/chat/completions";
-    alert(JSON.stringify(data));
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        
-        body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    return await response.json();
-}
-
-*/

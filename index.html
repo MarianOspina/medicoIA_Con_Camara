@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interfaz de Usuario SaludBot</title>
     <link rel="stylesheet" href="css/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ml5/0.10.0/ml5.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <div class="logo">
-            <img src="../Chat bot/assets/img/logo.png" alt="Logo de SaludBot">
+        <div class="camera-container" id="camera-container">
+            <video id="video" width="300" height="200" autoplay></video>
+            <canvas id="canvas" width="30" height="30"></canvas>
         </div>
         <h1>SaludBot</h1>
         <div class="chat-container" id="chat-container">
